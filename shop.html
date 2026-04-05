@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重获新生 - 购物商城</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #2c3e50, #4ca1af);
+            min-height: 100vh;
+            color: #333;
+        }
+        header {
+            background: #fff;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        header h1 {
+            color: #2c3e50;
+            font-size: 2rem;
+        }
+        nav {
+            margin-top: 0.8rem;
+        }
+        nav a {
+            margin: 0 1rem;
+            color: #333;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        nav a:hover {
+            color: #4ca1af;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1.2rem;
+            margin-top: 1.5rem;
+        }
+        .product-card {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: 0.3s;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+        .product-img {
+            height: 160px;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+        }
+        .product-info {
+            padding: 1rem;
+        }
+        .product-info h3 {
+            margin-bottom: 0.5rem;
+        }
+        .product-info p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.8rem;
+        }
+        .price {
+            font-size: 1.2rem;
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 0.8rem;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            background: #4ca1af;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #3b8d99;
+        }
+        .btn-red {
+            background: #e74c3c;
+        }
+        .btn-red:hover {
+            background: #c0392b;
+        }
+        .login-box, .register-box {
+            max-width: 400px;
+            margin: 4rem auto;
+            background: #fff;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .login-box h2, .register-box h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .msg {
+            padding: 0.8rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .msg.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .msg.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .admin {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-top: 2rem;
+        }
+        .admin h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .item-row {
+            padding: 0.7rem;
+            border-bottom: 1px solid #eee;
+        }
+        footer {
+            text-align: center;
+            color: #fff;
+            padding: 1.5rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>重获新生</h1>
+    <p>全新开始 · 品质购物</p>
+    <nav>
+        <a onclick="show('home')">首页</a>
+        <a onclick="show('shop')">商品</a>
+        <a onclick="show('login')" id="nav-login">登录</a>
+        <a onclick="show('register')" id="nav-register">注册</a>
+        <a onclick="show('admin')" id="nav-admin" style="display:none;">管理后台</a>
+    </nav>
+</header>
+
+<div class="container">
+    <!-- 首页 -->
+    <div id="home">
+        <h2 style="color:#fff; text-align:center; margin:2rem 0;">欢迎来到 重获新生 商城</h2>
+        <p style="color:#fff; text-align:center;">简单、干净、好用的线上购物网站</p>
+        <div style="text-align:center; margin-top:2rem;">
+            <button class="btn" onclick="show('shop')">开始购物</button>
+        </div>
+    </div>
+
+    <!-- 商品页 -->
+    <div id="shop" style="display:none;">
+        <h2 style="color:#fff;">全部商品</h2>
+        <div class="product-grid" id="goods"></div>
+    </div>
+
+    <!-- 登录 -->
+    <div id="login" style="display:none;">
+        <div class="login-box">
+            <h2>用户登录</h2>
+            <form onsubmit="login(event)">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="user" required>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="pwd" required>
+                </div>
+                <button class="btn" style="width:100%">登录</button>
+            </form>
+            <div id="login-msg"></div>
+        </div>
+    </div>
+
+    <!-- 注册 -->
+    <div id="register" style="display:none;">
+        <div class="register-box">
+            <h2>用户注册</h2>
+            <form onsubmit="reg(event)">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="r_user" required>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="r_pwd" required>
+                </div>
+                <div class="form-group">
+                    <label>确认密码</label>
+                    <input type="password" id="r_pwd2" required>
+                </div>
+                <button class="btn" style="width:100%">注册</button>
+            </form>
+            <div id="reg-msg"></div>
+        </div>
+    </div>
+
+    <!-- 管理员 -->
+    <div id="admin" style="display:none;">
+        <div class="admin">
+            <h2>管理后台</h2>
+            <button class="btn" onclick="showUsers()">查看用户</button>
+            <button class="btn" style="margin-left:0.5rem;" onclick="showOrders()">查看订单</button>
+            <button class="btn btn-red" style="margin-left:0.5rem;" onclick="logout()">退出登录</button>
+            <div id="admin-content" style="margin-top:1.5rem;"></div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    &copy; 2026 重获新生商城 - 所有权利保留
+</footer>
+
+<script>
+    // 商品
+    const goods = [
+        {id:1, name:'智能手表', price:299, intro:'多功能健康监测'},
+        {id:2, name:'无线耳机', price:159, intro:'降噪长续航'},
+        {id:3, name:'轻薄笔记本', price:3999, intro:'办公学习流畅'},
+        {id:4, name:'全面屏手机', price:2499, intro:'高清拍照'},
+        {id:5, name:'充电宝', price:89, intro:'大容量便携'},
+        {id:6, name:'蓝牙耳机', price:129, intro:'立体声环绕'},
+    ];
+
+    // 页面切换
+    function show(page) {
+        document.querySelectorAll('#home, #shop, #login, #register, #admin').forEach(el => {
+            el.style.display = 'none';
+        });
+        document.getElementById(page).style.display = 'block';
+        if(page === 'shop') loadGoods();
+    }
+
+    // 加载商品
+    function loadGoods() {
+        const box = document.getElementById('goods');
+        box.innerHTML = '';
+        goods.forEach(item => {
+            let div = document.createElement('div');
+            div.className = 'product-card';
+            div.innerHTML = `
+                <div class="product-img">商品图片</div>
+                <div class="product-info">
+                    <h3>${item.name}</h3>
+                    <p>${item.intro}</p>
+                    <div class="price">¥${item.price}</div>
+                    <button class="btn" onclick="buy(${item.id})">立即购买</button>
+                </div>
+            `;
+            box.appendChild(div);
+        });
+    }
+
+    // 购买
+    function buy(id) {
+        let user = JSON.parse(localStorage.getItem('now_user'));
+        let isAdmin = localStorage.getItem('isAdmin');
+        if(!user && !isAdmin) {
+            alert('请先登录！');
+            show('login');
+            return;
+        }
+        let item = goods.find(i => i.id == id);
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        orders.push({
+            user: user ? user.name : 'admin',
+            goods: item.name,
+            price: item.price,
+            time: new Date().toLocaleString()
+        });
+        localStorage.setItem('orders', JSON.stringify(orders));
+        alert('购买成功：' + item.name);
+    }
+
+    // 注册
+    function reg(e) {
+        e.preventDefault();
+        let name = document.getElementById('r_user').value.trim();
+        let pwd = document.getElementById('r_pwd').value;
+        let pwd2 = document.getElementById('r_pwd2').value;
+        let msg = document.getElementById('reg-msg');
+
+        if(pwd != pwd2) {
+            msg.innerHTML = '<div class="msg error">两次密码不一致</div>';
+            return;
+        }
+
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        if(users.some(u => u.name == name)) {
+            msg.innerHTML = '<div class="msg error">用户名已存在</div>';
+            return;
+        }
+
+        users.push({name, pwd});
+        localStorage.setItem('users', JSON.stringify(users));
+        msg.innerHTML = '<div class="msg success">注册成功！去登录</div>';
+        setTimeout(() => show('login'), 1500);
+    }
+
+    // 登录
+    function login(e) {
+        e.preventDefault();
+        let name = document.getElementById('user').value.trim();
+        let pwd = document.getElementById('pwd').value;
+        let msg = document.getElementById('login-msg');
+
+        // 管理员
+        if(name === 'admin' && pwd === 'admin123') {
+            localStorage.setItem('isAdmin', 'true');
+            localStorage.removeItem('now_user');
+            updateNav();
+            msg.innerHTML = '<div class="msg success">管理员登录成功</div>';
+            setTimeout(() => show('admin'), 1000);
+            return;
+        }
+
+        // 普通用户
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let find = users.find(u => u.name == name && u.pwd == pwd);
+        if(find) {
+            localStorage.setItem('now_user', JSON.stringify({name: find.name}));
+            localStorage.removeItem('isAdmin');
+            updateNav();
+            msg.innerHTML = '<div class="msg success">登录成功</div>';
+            setTimeout(() => show('shop'), 1000);
+        } else {
+            msg.innerHTML = '<div class="msg error">账号或密码错误</div>';
+        }
+    }
+
+    // 更新导航
+    function updateNav() {
+        let isAdmin = localStorage.getItem('isAdmin');
+        let nowUser = localStorage.getItem('now_user');
+        document.getElementById('nav-login').style.display = (isAdmin || nowUser) ? 'none' : 'inline';
+        document.getElementById('nav-register').style.display = (isAdmin || nowUser) ? 'none' : 'inline';
+        document.getElementById('nav-admin').style.display = isAdmin ? 'inline' : 'none';
+    }
+
+    // 查看用户
+    function showUsers() {
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let html = '<h3>注册用户</h3>';
+        users.forEach(u => {
+            html += `<div class="item-row">${u.name}</div>`;
+        });
+        document.getElementById('admin-content').innerHTML = html;
+    }
+
+    // 查看订单
+    function showOrders() {
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        let html = '<h3>订单记录</h3>';
+        if(orders.length === 0) {
+            html += '<div class="item-row">暂无订单</div>';
+        } else {
+            orders.forEach(o => {
+                html += `<div class="item-row">${o.user}｜${o.goods}｜¥${o.price}｜${o.time}</div>`;
+            });
+        }
+        document.getElementById('admin-content').innerHTML = html;
+    }
+
+    // 退出
+    function logout() {
+        localStorage.clear();
+        updateNav();
+        show('home');
+        alert('已退出登录');
+    }
+
+    // 初始化
+    window.onload = function() {
+        updateNav();
+    };
+</script>
+</body>
+</html>
