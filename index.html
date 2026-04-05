@@ -2,105 +2,172 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>毒蘑菇GPU测试</title>
+<title>真实3D毒蘑菇（Mandelbulb）</title>
 <style>
-body{margin:0;background:#0f172a;color:white;font-family:sans-serif;text-align:center}
-#top{padding:10px}
-select,button{padding:8px;margin:5px;border-radius:6px;border:none}
-canvas{display:block;margin:auto;background:black}
+body{margin:0;background:black;color:white;font-family:sans-serif}
+#ui{position:fixed;top:10px;left:10px}
+select,button{padding:6px;margin:4px;border-radius:6px;border:none}
+canvas{display:block}
 </style>
 </head>
 <body>
 
-<div id="top">
-  <select id="preset">
-    <option value="0.5">超低</option>
-    <option value="0.75">低</option>
-    <option value="1" selected>中</option>
-    <option value="1.5">高</option>
-    <option value="2">极限</option>
-  </select>
-  <button onclick="start()">开始测试</button>
-  <button onclick="stop()">停止</button>
-  <div id="info">FPS: 0</div>
+<div id="ui">
+<select id="quality">
+<option value="0.5">超低</option>
+<option value="0.75">低</option>
+<option value="1" selected>中</option>
+<option value="1.5">高</option>
+<option value="2">极限</option>
+</select>
+<button onclick="start()">开始</button>
+<div id="fps">FPS: 0</div>
 </div>
 
-<canvas id="c"></canvas>
+<canvas id="gl"></canvas>
 
 <script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("gl");
+const gl = canvas.getContext("webgl");
 
-let scale = 1;
-let running = false;
-let frames = 0;
-let last = 0;
-let fps = 0;
-let t = 0;
+let running=false,scale=1;
+let frames=0,last=0;
 
-function resize() {
-  canvas.width = window.innerWidth * scale;
-  canvas.height = window.innerHeight * scale;
-}
-window.onresize = resize;
-
-function start() {
-  scale = parseFloat(document.getElementById("preset").value);
-  resize();
-  running = true;
-  last = performance.now();
-  loop(last);
+function resize(){
+ canvas.width=window.innerWidth*scale;
+ canvas.height=window.innerHeight*scale;
+ gl.viewport(0,0,canvas.width,canvas.height);
 }
 
-function stop() {
-  running = false;
+// 顶点
+const vs=`attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}`;
+
+// 真·3D Mandelbulb 距离估计 + 光照
+const fs=`
+precision highp float;
+uniform vec2 res;
+uniform float time;
+
+float mandelbulb(vec3 p){
+ vec3 z=p;
+ float dr=1.0;
+ float r=0.0;
+ for(int i=0;i<10;i++){
+  r=length(z);
+  if(r>2.0) break;
+  float theta=acos(z.z/r);
+  float phi=atan(z.y,z.x);
+  dr=pow(r,7.0)*8.0*dr+1.0;
+  float zr=pow(r,8.0);
+  theta*=8.0;
+  phi*=8.0;
+  z=zr*vec3(sin(theta)*cos(phi),sin(theta)*sin(phi),cos(theta));
+  z+=p;
+ }
+ return 0.5*log(r)*r/dr;
 }
 
-function loop(time) {
-  if (!running) return;
-
-  frames++;
-  if (time - last >= 1000) {
-    fps = frames;
-    document.getElementById("info").innerText =
-      `FPS: ${fps} | 分辨率: ${canvas.width}x${canvas.height}`;
-    frames = 0;
-    last = time;
-  }
-
-  render();
-  requestAnimationFrame(loop);
+vec3 getNormal(vec3 p){
+ float e=0.001;
+ return normalize(vec3(
+  mandelbulb(p+vec3(e,0,0))-mandelbulb(p-vec3(e,0,0)),
+  mandelbulb(p+vec3(0,e,0))-mandelbulb(p-vec3(0,e,0)),
+  mandelbulb(p+vec3(0,0,e))-mandelbulb(p-vec3(0,0,e))
+ ));
 }
 
-function render() {
-  t += 0.04;
+void main(){
+ vec2 uv=(gl_FragCoord.xy/res-0.5)*2.0;
+ uv.x*=res.x/res.y;
 
-  let w = canvas.width;
-  let h = canvas.height;
+ vec3 ro=vec3(0.0,0.0,-4.0);
+ vec3 rd=normalize(vec3(uv,1.5));
 
-  let img = ctx.createImageData(w, h);
-  let d = img.data;
+ float t=0.0;
+ float d;
+ bool hit=false;
 
-  for (let i = 0; i < d.length; i += 4) {
-    let x = (i / 4) % w;
-    let y = Math.floor(i / 4 / w);
+ for(int i=0;i<100;i++){
+  vec3 p=ro+rd*t;
+  d=mandelbulb(p);
+  if(d<0.001){hit=true;break;}
+  t+=d;
+  if(t>10.0) break;
+ }
 
-    let nx = x / w - 0.5;
-    let ny = y / h - 0.5;
+ vec3 col=vec3(0.0);
 
-    let v = Math.sin(nx * 10 + t) + Math.cos(ny * 10 + t);
+ if(hit){
+  vec3 p=ro+rd*t;
+  vec3 n=getNormal(p);
+  vec3 light=normalize(vec3(1.0,1.0,-1.0));
 
-    let r = Math.sin(v + t) * 127 + 128;
-    let g = Math.cos(v + t * 1.3) * 127 + 128;
-    let b = Math.sin(v * 2 + t) * 127 + 128;
+  float diff=max(dot(n,light),0.0);
+  float spec=pow(max(dot(reflect(-light,n),-rd),0.0),16.0);
 
-    d[i] = r;
-    d[i + 1] = g;
-    d[i + 2] = b;
-    d[i + 3] = 255;
-  }
+  col=vec3(0.2,0.6,1.0)*diff + spec;
+ }
 
-  ctx.putImageData(img, 0, 0);
+ gl_FragColor=vec4(col,1.0);
+}
+`;
+
+function compile(type,src){
+ let s=gl.createShader(type);
+ gl.shaderSource(s,src);
+ gl.compileShader(s);
+ return s;
+}
+
+function init(){
+ let v=compile(gl.VERTEX_SHADER,vs);
+ let f=compile(gl.FRAGMENT_SHADER,fs);
+ let prog=gl.createProgram();
+ gl.attachShader(prog,v);
+ gl.attachShader(prog,f);
+ gl.linkProgram(prog);
+ gl.useProgram(prog);
+
+ let buf=gl.createBuffer();
+ gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([
+ -1,-1,1,-1,-1,1,
+ -1,1,1,-1,1,1
+ ]),gl.STATIC_DRAW);
+
+ let loc=gl.getAttribLocation(prog,"p");
+ gl.enableVertexAttribArray(loc);
+ gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+
+ prog.res=gl.getUniformLocation(prog,"res");
+ prog.time=gl.getUniformLocation(prog,"time");
+ return prog;
+}
+
+let program;
+
+function start(){
+ scale=parseFloat(document.getElementById("quality").value);
+ resize();
+ program=init();
+ running=true;
+ last=performance.now();
+ loop(last);
+}
+
+function loop(now){
+ if(!running)return;
+ frames++;
+ if(now-last>1000){
+  document.getElementById("fps").innerText="FPS: "+frames;
+  frames=0;last=now;
+ }
+
+ gl.uniform2f(program.res,canvas.width,canvas.height);
+ gl.uniform1f(program.time,now*0.001);
+
+ gl.drawArrays(gl.TRIANGLES,0,6);
+ requestAnimationFrame(loop);
 }
 </script>
 
