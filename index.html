@@ -2,120 +2,123 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>躲避方块小游戏</title>
+  <title>浏览器性能测试（可调强度）</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #111;
-      color: white;
-      font-family: Arial;
-    }
-    #score {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-size: 20px;
-    }
-    canvas {
-      display: block;
-    }
+    body { font-family: Arial; text-align: center; background: #0f172a; color: white; margin: 0; }
+    h1 { margin-top: 24px; }
+    #panel { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 10px 0 6px; }
+    #stats { font-size: 18px; margin: 8px; }
+    button { padding: 10px 18px; font-size: 14px; border: none; border-radius: 8px; cursor: pointer; background: #22c55e; color: white; }
+    input[type=range] { width: 260px; }
+    canvas { display: block; margin: 10px auto 20px; background: black; border-radius: 10px; }
+    .label { opacity: .85; }
   </style>
 </head>
 <body>
 
-<div id="score">分数: 0</div>
-<canvas id="gameCanvas"></canvas>
+<h1>⚡ 浏览器性能测试（强度可调）</h1>
+
+<div id="panel">
+  <span class="label">粒子数：</span>
+  <input id="range" type="range" min="500" max="20000" step="500" value="2000">
+  <span id="rangeVal">2000</span>
+  <button id="startBtn">开始</button>
+  <button id="stopBtn">停止</button>
+  <button id="applyBtn">应用强度</button>
+</div>
+
+<div id="stats">未开始</div>
+<canvas id="canvas" width="900" height="520"></canvas>
 
 <script>
-const canvas = document.getElementById("gameCanvas");
+const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
 
-let player = {
-  x: canvas.width / 2,
-  y: canvas.height - 60,
-  size: 30,
-  speed: 6
-};
+const range = document.getElementById('range');
+const rangeVal = document.getElementById('rangeVal');
+const stats = document.getElementById('stats');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const applyBtn = document.getElementById('applyBtn');
 
-let obstacles = [];
-let score = 0;
-let gameOver = false;
+range.addEventListener('input', () => rangeVal.textContent = range.value);
 
-// 控制移动
-let keys = {};
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
+let particles = [];
+let running = false;
+let frames = 0;
+let lastTime = 0;
+let lastFps = 0;
 
-function spawnObstacle() {
-  obstacles.push({
+function createParticles(count) {
+  particles = new Array(count).fill(0).map(() => ({
     x: Math.random() * canvas.width,
-    y: -20,
-    size: 20 + Math.random() * 20,
-    speed: 2 + Math.random() * 3
-  });
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 4,
+    vy: (Math.random() - 0.5) * 4
+  }));
 }
 
 function update() {
-  if (gameOver) return;
-
-  // 玩家移动
-  if (keys["ArrowLeft"]) player.x -= player.speed;
-  if (keys["ArrowRight"]) player.x += player.speed;
-
-  // 限制边界
-  player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
-
-  // 障碍物
-  obstacles.forEach(o => o.y += o.speed);
-
-  // 碰撞检测
-  obstacles.forEach(o => {
-    if (
-      player.x < o.x + o.size &&
-      player.x + player.size > o.x &&
-      player.y < o.y + o.size &&
-      player.y + player.size > o.y
-    ) {
-      gameOver = true;
-      alert("游戏结束！你的分数是: " + score);
-      location.reload();
-    }
-  });
-
-  // 删除超出屏幕的
-  obstacles = obstacles.filter(o => o.y < canvas.height);
-
-  score++;
-  document.getElementById("score").textContent = "分数: " + score;
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+  }
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // 玩家
-  ctx.fillStyle = "#4CAF50";
-  ctx.fillRect(player.x, player.y, player.size, player.size);
-
-  // 障碍物
-  ctx.fillStyle = "#f44336";
-  obstacles.forEach(o => {
-    ctx.fillRect(o.x, o.y, o.size, o.size);
-  });
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#00ffff";
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    ctx.fillRect(p.x, p.y, 3, 3);
+  }
 }
 
-function gameLoop() {
+function loop(ts) {
+  if (!running) return;
+  frames++;
+
+  if (ts - lastTime >= 1000) {
+    lastFps = frames;
+    stats.textContent = `FPS: ${lastFps} | 粒子数: ${particles.length}`;
+    frames = 0;
+    lastTime = ts;
+  }
+
   update();
   draw();
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(loop);
 }
 
-// 每隔一段时间生成障碍
-setInterval(spawnObstacle, 800);
+startBtn.onclick = () => {
+  if (!running) {
+    running = true;
+    createParticles(parseInt(range.value, 10));
+    lastTime = performance.now();
+    frames = 0;
+    loop(lastTime);
+  }
+};
 
-gameLoop();
+stopBtn.onclick = () => {
+  running = false;
+  stats.textContent = `已停止 | 上次FPS: ${lastFps} | 粒子数: ${particles.length}`;
+};
+
+applyBtn.onclick = () => {
+  createParticles(parseInt(range.value, 10));
+  stats.textContent = `已应用新强度：${particles.length}`;
+};
+
+// 自适应屏幕（可选）
+window.addEventListener('resize', () => {
+  canvas.width = Math.min(window.innerWidth - 20, 1200);
+  canvas.height = Math.min(window.innerHeight - 180, 700);
+});
 </script>
 
 </body>
