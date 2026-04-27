@@ -1,175 +1,58 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>真实3D毒蘑菇（Mandelbulb）</title>
-<style>
-body{margin:0;background:black;color:white;font-family:sans-serif}
-#ui{position:fixed;top:10px;left:10px}
-select,button{padding:6px;margin:4px;border-radius:6px;border:none}
-canvas{display:block}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蛋仔派对原价代充 - 统一+2元手续费</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#f5f7fa;font-family:微软雅黑;}
+        .container{max-width:420px;margin:20px auto;background:#fff;border-radius:12px;padding:20px;}
+        h1{text-align:center;color:#ff6799;margin-bottom:10px;font-size:24px;}
+        .desc{text-align:center;color:#999;margin-bottom:20px;font-size:14px;}
+        .item{background:#fef0f5;padding:15px;border-radius:8px;margin:10px 0;display:flex;justify-content:space-between;}
+        .wx{text-align:center;margin-top:30px;}
+        .wx img{width:200px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+        .tip{margin-top:20px;color:#666;font-size:14px;line-height:1.8;}
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>蛋仔派对原价代充</h1>
+        <div class="desc">官方原价充值，每单统一+2元人工手续费</div>
 
-<div id="ui">
-<select id="quality">
-<option value="0.5">超低</option>
-<option value="0.75">低</option>
-<option value="1" selected>中</option>
-<option value="1.5">高</option>
-<option value="2">极限</option>
-</select>
-<button onclick="start()">开始</button>
-<div id="fps">FPS: 0</div>
-</div>
+        <div class="item">
+            <span>6元档 60蛋币</span>
+            <span>6 + 2 = 8 元</span>
+        </div>
+        <div class="item">
+            <span>30元档 300蛋币</span>
+            <span>30 + 2 = 32 元</span>
+        </div>
+        <div class="item">
+            <span>68元档 680蛋币</span>
+            <span>68 + 2 = 70 元</span>
+        </div>
+        <div class="item">
+            <span>128元档 1280蛋币</span>
+            <span>128 + 2 = 130 元</span>
+        </div>
+        <div class="item">
+            <span>328元档 典藏礼包</span>
+            <span>328 + 2 = 330 元</span>
+        </div>
 
-<canvas id="gl"></canvas>
+        <div class="wx">
+            <p>扫码加微信下单（备注：蛋仔代充）</p>
+            <!-- 把你的二维码图片保存为 wechat.jpg，和网页文件放一起 -->
+            <img src="wechat.jpg" alt="微信二维码">
+        </div>
 
-<script>
-const canvas = document.getElementById("gl");
-const gl = canvas.getContext("webgl");
-
-let running=false,scale=1;
-let frames=0,last=0;
-
-function resize(){
- canvas.width=window.innerWidth*scale;
- canvas.height=window.innerHeight*scale;
- gl.viewport(0,0,canvas.width,canvas.height);
-}
-
-// 顶点
-const vs=`attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}`;
-
-// 真·3D Mandelbulb 距离估计 + 光照
-const fs=`
-precision highp float;
-uniform vec2 res;
-uniform float time;
-
-float mandelbulb(vec3 p){
- vec3 z=p;
- float dr=1.0;
- float r=0.0;
- for(int i=0;i<10;i++){
-  r=length(z);
-  if(r>2.0) break;
-  float theta=acos(z.z/r);
-  float phi=atan(z.y,z.x);
-  dr=pow(r,7.0)*8.0*dr+1.0;
-  float zr=pow(r,8.0);
-  theta*=8.0;
-  phi*=8.0;
-  z=zr*vec3(sin(theta)*cos(phi),sin(theta)*sin(phi),cos(theta));
-  z+=p;
- }
- return 0.5*log(r)*r/dr;
-}
-
-vec3 getNormal(vec3 p){
- float e=0.001;
- return normalize(vec3(
-  mandelbulb(p+vec3(e,0,0))-mandelbulb(p-vec3(e,0,0)),
-  mandelbulb(p+vec3(0,e,0))-mandelbulb(p-vec3(0,e,0)),
-  mandelbulb(p+vec3(0,0,e))-mandelbulb(p-vec3(0,0,e))
- ));
-}
-
-void main(){
- vec2 uv=(gl_FragCoord.xy/res-0.5)*2.0;
- uv.x*=res.x/res.y;
-
- vec3 ro=vec3(0.0,0.0,-4.0);
- vec3 rd=normalize(vec3(uv,1.5));
-
- float t=0.0;
- float d;
- bool hit=false;
-
- for(int i=0;i<100;i++){
-  vec3 p=ro+rd*t;
-  d=mandelbulb(p);
-  if(d<0.001){hit=true;break;}
-  t+=d;
-  if(t>10.0) break;
- }
-
- vec3 col=vec3(0.0);
-
- if(hit){
-  vec3 p=ro+rd*t;
-  vec3 n=getNormal(p);
-  vec3 light=normalize(vec3(1.0,1.0,-1.0));
-
-  float diff=max(dot(n,light),0.0);
-  float spec=pow(max(dot(reflect(-light,n),-rd),0.0),16.0);
-
-  col=vec3(0.2,0.6,1.0)*diff + spec;
- }
-
- gl_FragColor=vec4(col,1.0);
-}
-`;
-
-function compile(type,src){
- let s=gl.createShader(type);
- gl.shaderSource(s,src);
- gl.compileShader(s);
- return s;
-}
-
-function init(){
- let v=compile(gl.VERTEX_SHADER,vs);
- let f=compile(gl.FRAGMENT_SHADER,fs);
- let prog=gl.createProgram();
- gl.attachShader(prog,v);
- gl.attachShader(prog,f);
- gl.linkProgram(prog);
- gl.useProgram(prog);
-
- let buf=gl.createBuffer();
- gl.bindBuffer(gl.ARRAY_BUFFER,buf);
- gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([
- -1,-1,1,-1,-1,1,
- -1,1,1,-1,1,1
- ]),gl.STATIC_DRAW);
-
- let loc=gl.getAttribLocation(prog,"p");
- gl.enableVertexAttribArray(loc);
- gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-
- prog.res=gl.getUniformLocation(prog,"res");
- prog.time=gl.getUniformLocation(prog,"time");
- return prog;
-}
-
-let program;
-
-function start(){
- scale=parseFloat(document.getElementById("quality").value);
- resize();
- program=init();
- running=true;
- last=performance.now();
- loop(last);
-}
-
-function loop(now){
- if(!running)return;
- frames++;
- if(now-last>1000){
-  document.getElementById("fps").innerText="FPS: "+frames;
-  frames=0;last=now;
- }
-
- gl.uniform2f(program.res,canvas.width,canvas.height);
- gl.uniform1f(program.time,now*0.001);
-
- gl.drawArrays(gl.TRIANGLES,0,6);
- requestAnimationFrame(loop);
-}
-</script>
-
+        <div class="tip">
+            1. 全部官方原价，每单仅收2元人工手续费<br>
+            2. 充值请提供：游戏账号 + 区服信息<br>
+            3. 人工在线快充，安全不封号
+        </div>
+    </div>
 </body>
 </html>
