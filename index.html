@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>内嵌视图</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>GChat</title>
     <style>
         * {
             margin: 0;
@@ -11,42 +11,118 @@
             box-sizing: border-box;
         }
 
-        body {
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            background: #ffffff;
-        }
-
-        /* iframe 占满全屏，无任何边距、工具栏 */
-        .full-frame {
+        /* 彻底移除滚动条干扰，确保容器完全锁定 */
+        html, body {
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000; /* 深色背景防止边缘漏白 */
+        }
+
+        /* iframe 容器采用绝对定位，覆盖所有边缘，无任何外边距/内边距 */
+        .full-frame-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        /* iframe 确保高度、宽度精确填充，同时保证内容不会因滚动偏移而被切 */
+        .full-frame {
             display: block;
+            width: 100%;
+            height: 100%;
             border: none;
             margin: 0;
             padding: 0;
+            /* 关键修复：让iframe内容按设备视口完整展示，无滚动偏移造成底栏出界 */
+            position: relative;
+            /* 允许内部滚动，但外部不会干扰 */
+            overflow: auto;
+            /* 确保 iframe 背景色与主容器一致 */
+            background: white;
+        }
+
+        /* 针对移动端额外的兼容：防止软键盘或旋转时布局错位 */
+        @media screen and (orientation: portrait) {
+            .full-frame-container, .full-frame {
+                width: 100%;
+                height: 100%;
+            }
+        }
+
+        @media screen and (orientation: landscape) {
+            .full-frame-container, .full-frame {
+                width: 100%;
+                height: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- 
-        直接加载目标网站：gaozui.us.ci
-        没有地址栏、没有按钮、没有返回刷新，纯净显示
-    -->
-    <iframe 
-        class="full-frame" 
-        src="https://gaozui.us.ci" 
-        title="内容显示区域"
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation allow-downloads allow-presentation"
-        loading="eager">
-    </iframe>
+    <div class="full-frame-container">
+        <iframe 
+            class="full-frame" 
+            src="https://gaozui.us.ci" 
+            title="GChat 内容窗口"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation allow-downloads allow-presentation allow-popups-to-escape-sandbox"
+            loading="eager"
+            frameborder="0"
+            scrolling="yes">
+        </iframe>
+    </div>
 
     <script>
-        // 极简后备：如果 iframe 加载失败（例如网络错误或X-Frame限制），不做任何额外UI，
-        // 保持空白即可。完全符合无按钮、无控制项的需求。
-        // 注：某些网站由于自身设置了 X-Frame-Options 禁止被嵌入，会显示空白，这是网站服务端的策略，
-        // 本页面无法绕过，但已完全满足无多余控件的展示要求。
+        (function() {
+            // 修复底栏/顶栏在部分移动端浏览器中被裁剪或移出视口的额外措施
+            // 强制锁定视口尺寸，确保iframe容器始终填充可视区域，无论旋转或键盘弹出
+            function fixViewport() {
+                const container = document.querySelector('.full-frame-container');
+                if (container) {
+                    // 强制重新计算宽高，确保没有任何偏移
+                    container.style.width = window.innerWidth + 'px';
+                    container.style.height = window.innerHeight + 'px';
+                }
+                // 确保 body/html 的实际尺寸严格同步
+                document.documentElement.style.width = window.innerWidth + 'px';
+                document.documentElement.style.height = window.innerHeight + 'px';
+                document.body.style.width = window.innerWidth + 'px';
+                document.body.style.height = window.innerHeight + 'px';
+            }
+
+            // 立即执行一次
+            fixViewport();
+
+            // 监听窗口大小变化（旋转屏幕时）
+            window.addEventListener('resize', function() {
+                fixViewport();
+                // 短暂的延迟确保渲染引擎重新计算（针对一些 WebView）
+                setTimeout(fixViewport, 50);
+            });
+
+            // 监听滚动事件，防止任何全局滚动导致iframe错位（实际上页面自身已经overflow:hidden）
+            window.addEventListener('scroll', function(e) {
+                window.scrollTo(0, 0);
+            });
+
+            // 针对移动端键盘弹出可能引起视口变化再做修正
+            if ('visualViewport' in window) {
+                window.visualViewport.addEventListener('resize', function() {
+                    fixViewport();
+                });
+            }
+
+            // 可选：尝试与iframe通信，如果iframe内部滚动导致父级滚动已由overflow控制，无影响
+            // 额外注意: 有些网页的固定定位元素依赖于视口，但以上锁定应该保证完整显示底栏顶栏不出界
+        })();
     </script>
 </body>
 </html>
